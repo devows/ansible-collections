@@ -1,0 +1,21 @@
+services:
+
+  nginx:
+    container_name: nginx
+    image: {{ nginx_runner.image }}
+    restart: always
+    network_mode: host
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "3072m"
+        max-file: "1"
+
+    {% if nginx_runner.volumes | length > 0 -%}
+    volumes:
+      {% for item in nginx_runner.volumes -%}
+      - {{ item }}
+      {% endfor %}
+    {% endif %}
+
+

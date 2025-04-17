@@ -1,0 +1,165 @@
+{% for proxy_endpoint in nginx_conf.proxy_endpoint.endpoints -%}
+
+
+{% for location in proxy_endpoint.locations | default(nginx_default.proxy_endpoint.locations) -%}
+
+  {% if location.upstream.enable | default(nginx_default.location.upstream.enable)%}
+  {{ location.upstream.body | default(nginx_default.location.upstream.body) }}
+  {% else %}
+
+    {% if location.providers | default(nginx_default.location.providers)| length > 0 %}
+    upstream node_rpc_provider_{{ proxy_endpoint.name | default(nginx_default.proxy_endpoint.name) }}_{{ location.name | default(nginx_default.location.name) }} {
+      {% if location.load_balancing_strategy | default('') %}
+      {{ location.load_balancing_strategy }};
+      {% endif %}
+      {% for provider in location.providers | default(nginx_default.location.providers) -%}
+      server 127.0.0.1:{{ provider.listen }}{{ ' weight=%s' % provider.weight if provider.weight }} {{ provider.additional_server | default('') }};
+      {% endfor %}
+      {{ provider.additional_upstream | default('') }}
+    }
+
+    map $http_upgrade $upstream_backend_{{ proxy_endpoint.name | default(nginx_default.proxy_endpoint.name) }}_{{ location.name | default(nginx_default.location.name) }} {
+      websocket node_rpc_provider_{{ proxy_endpoint.name | default(nginx_default.proxy_endpoint.name) }}_{{ location.name | default(nginx_default.location.name) }};
+      default node_rpc_provider_{{ proxy_endpoint.name | default(nginx_default.proxy_endpoint.name) }}_{{ location.name | default(nginx_default.location.name) }};
+    }
+    {% endif %}
+
+  {% endif %}
+
+{% endfor %}
+
+
+{{ proxy_endpoint.additional.x_out_server | default(nginx_default.proxy_endpoint.additional.x_out_server) }}
+
+server {
+
+  {% if proxy_endpoint.listen | default(nginx_default.proxy_endpoint.listen)== 443 %}
+  listen {{ proxy_endpoint.listen | default(nginx_default.proxy_endpoint.listen) }} ssl;
+  http2 on;
+  {% else %}
+  listen {{ proxy_endpoint.listen | default(nginx_default.proxy_endpoint.listen) }};
+  {% endif %}
+
+  server_name {{ proxy_endpoint.domains | default(nginx_default.proxy_endpoint.domains)| join(' ') }};
+
+  {{ proxy_endpoint.additional.x_in_server | default(nginx_default.proxy_endpoint.additional.x_in_server) }}
+
+  real_ip_header CF-Connecting-IP;
+  set_real_ip_from 0.0.0.0/0;
+  set_real_ip_from ::/0;
+
+  error_page 429 @fallback_429;
+  location @fallback_429 {
+    internal;
+    return 429 "Too Many Requests";
+  }
+
+  # if ($http_user_agent = "") { return 403; }
+
+  {% for location in proxy_endpoint.locations | default(nginx_default.proxy_endpoint.locations) -%}
+  ## location {{ location.name | default(nginx_default.location.name) }}
+  location {{ location.path | default(nginx_default.location.path) }} {
+    {% if location.upstream.enable | default(nginx_default.location.upstream.enable)-%}
+    proxy_pass http://${{ location.upstream.name | default(nginx_default.location.upstream.name) }};
+    {% else -%}
+
+
+    {{ location.additional.x_in_location | default(nginx_default.location.additional.x_in_location) }}
+
+    {% if location.providers | default(nginx_default.location.providers)| length > 0 %}
+    proxy_pass http://$upstream_backend_{{ proxy_endpoint.name | default(nginx_default.proxy_endpoint.name) }}_{{ location.name | default(nginx_default.location.name) }};
+    {% else %}
+    proxy_pass {{ location.endpoint | default(nginx_default.location.endpoint) }};
+    {% endif %}
+
+    {% endif %}
+
+    proxy_redirect off;
+
+    proxy_set_header Host {{ location.host | default(nginx_default.location.host) }};
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    {% if location.proxy_ssl | default(nginx_default.location.proxy_ssl) %}
+    proxy_ssl_name {{ location.host | default(nginx_default.location.host) }};
+    proxy_ssl_server_name on;
+    {% endif -%}
+
+    {% if location.deny | default(nginx_default.location.deny) | length > 0 -%}
+    {% for deny in location.deny | default(nginx_default.location.deny) -%}
+    deny {{ deny }};
+    {% endfor -%}
+    {% endif -%}
+  }
+  {% endfor %}
+
+}
+
+
+
+{% for location in proxy_endpoint.locations | default(nginx_default.proxy_endpoint.locations) -%}
+{% if not location.upstream.enable | default(nginx_default.location.upstream.enable) and location.providers | default(nginx_default.location.providers) | length > 0 -%}
+{% for provider in location.providers | default(nginx_default.location.providers)-%}
+# proxy {{ provider.name | default(nginx_default.provider.name) }}
+server {
+  listen {{ provider.listen }};
+
+  real_ip_header CF-Connecting-IP;
+  set_real_ip_from 0.0.0.0/0;
+  set_real_ip_from ::/0;
+
+  error_page 429 @fallback_429;
+  location @fallback_429 {
+    internal;
+    return 429 "Too Many Requests";
+  }
+
+
+  location / {
+
+    proxy_pass {{ provider.endpoint }};
+
+    proxy_redirect off;
+
+    proxy_set_header Host "{{ provider.host | default(nginx_default.provider.host) }}";
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    {% if provider.proxy_ssl | default(nginx_default.provider.proxy_ssl) %}
+    proxy_ssl_name {{ provider.host | default(nginx_default.provider.host) }};
+    proxy_ssl_server_name on;
+    {% endif %}
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+
+  }
+
+}
+{% endfor -%}
+{% endif -%}
+{% endfor -%}
+
+
+{% if proxy_endpoint.forward_ssl | default(nginx_default.proxy_endpoint.forward_ssl) %}
+server {
+  listen 80;
+  server_name {{ proxy_endpoint.domains | default(nginx_default.proxy_endpoint.domains)| join(' ') }};
+
+  location /.well-known {
+    try_files $uri $uri/ =404;
+  }
+
+  location / {
+    rewrite ^/(.*)$ https://$host/$1 permanent;
+  }
+}
+{% endif %}
+
+{% endfor %}
+

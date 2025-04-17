@@ -1,0 +1,18 @@
+
+server {
+  server_name localhost;
+  listen 80;
+
+  {% for item in subql_runner.queries %}
+
+  location /{{ item.name }} {
+    proxy_pass http://query-{{ item.name }}:3000/;
+    proxy_redirect off;
+    proxy_set_header Host $host;
+  }
+
+  {% endfor %}
+
+}
+
+

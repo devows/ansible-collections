@@ -1,0 +1,27 @@
+
+server {
+  server_name localhost;
+  listen 80;
+
+  {% for item in thegraph_runner.nodes -%}
+
+  location /{{ item.name }}/ {
+    proxy_pass http://thegraph-{{ item.name }}:8000/;
+    proxy_redirect off;
+    proxy_set_header Host $host;
+  }
+
+  location /{{ item.name }}/deploy/ {
+    if ($http_authorization != "Bearer {{ thegraph_runner.authorization_token }}") {
+      return 401;
+    }
+    proxy_pass http://thegraph-{{ item.name }}:8020/;
+    proxy_redirect off;
+    proxy_set_header Host $host;
+  }
+
+  {% endfor -%}
+
+}
+
+

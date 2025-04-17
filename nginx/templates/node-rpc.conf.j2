@@ -1,0 +1,117 @@
+{% if nginx_conf.node_rpc.load_balancing.enable %}
+
+upstream node_rpc_http_{{ nginx_conf.node_rpc.name }} {
+  ip_hash;
+  {% if (nginx_conf.node_rpc.load_balancing.method == 'least_conn') or (nginx_conf.node_rpc.load_balancing.method == 'ip_hash') %}
+  {{ nginx_conf.node_rpc.load_balancing.method }};
+  {% endif %}
+  {% for item in nginx_conf.node_rpc.hosts %}
+  {% if (item.port is defined) and (item.port.http) %}
+  server {{ item.host }}:{{ item.port.http }}{{ ' weight=%s' % item.weight if item.weight }};
+  {% else %}
+  server {{ item.host }}:{{ nginx_conf.node_rpc.default_value.http }}{{ ' weight=%s' % item.weight if item.weight }};
+  {% endif %}
+  {% endfor %}
+}
+
+upstream node_rpc_ws_{{ nginx_conf.node_rpc.name }} {
+  ip_hash;
+  {% if (nginx_conf.node_rpc.load_balancing.method == 'least_conn') or (nginx_conf.node_rpc.load_balancing.method == 'ip_hash') %}
+  {{ nginx_conf.node_rpc.load_balancing.method }};
+  {% endif %}
+  {% for item in nginx_conf.node_rpc.hosts %}
+  {% if (item.port is defined) and (item.port.ws) %}
+  server {{ item.host }}:{{ item.port.ws }}{{ ' weight=%s' % item.weight if item.weight }};
+  {% else %}
+  server {{ item.host }}:{{ nginx_conf.node_rpc.default_value.ws }}{{ ' weight=%s' % item.weight if item.weight }};
+  {% endif %}
+  {% endfor %}
+}
+
+map $http_upgrade $upstream_backend_{{ nginx_conf.node_rpc.name }} {
+  websocket node_rpc_ws_{{ nginx_conf.node_rpc.name }};
+  default node_rpc_http_{{ nginx_conf.node_rpc.name }};
+}
+
+{% else %}
+
+map $http_upgrade $upstream_backend_{{ nginx_conf.node_rpc.name }} {
+  websocket {{ nginx_conf.node_rpc.default_value.endpoint }}:{{ nginx_conf.node_rpc.default_value.ws }};
+  default {{ nginx_conf.node_rpc.default_value.endpoint }}:{{ nginx_conf.node_rpc.default_value.http }};
+}
+
+{% endif %}
+
+{{ nginx_conf.node_rpc.additional.x_out_server }}
+
+server {
+
+  {% if nginx_conf.node_rpc.listen == 443 %}
+  listen {{ nginx_conf.node_rpc.listen }} ssl;
+  http2 on;
+  {% else %}
+  listen {{ nginx_conf.node_rpc.listen }};
+  {% endif %}
+
+  server_name {{ nginx_conf.node_rpc.domains | join(' ') }};
+
+  real_ip_header CF-Connecting-IP;
+  set_real_ip_from 0.0.0.0/0;
+  set_real_ip_from ::/0;
+
+  error_page 429 @fallback_429;
+  location @fallback_429 {
+    internal;
+    return 429 "Too Many Requests";
+  }
+
+  {{ nginx_conf.node_rpc.additional.x_in_server }}
+
+  # if ($http_user_agent = "") { return 403; }
+
+  location / {
+    proxy_pass http://$upstream_backend_{{ nginx_conf.node_rpc.name }};
+    proxy_redirect off;
+
+    proxy_set_header Host "{{ nginx_conf.node_rpc.proxy_host }}";
+
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    {% if nginx_conf.node_rpc.deny | length > 0 -%}
+    {% for item in nginx_conf.node_rpc.deny -%}
+    deny {{ item }};
+    {% endfor %}
+    {% endif %}
+  }
+
+
+  {% if nginx_conf.node_rpc.healthz.enable -%}
+  location /healthz {
+    proxy_pass http://{{ nginx_conf.node_rpc.healthz.endpoint }};
+  }
+  {% endif -%}
+
+  {% if nginx_conf.node_rpc.healthz.enable -%}
+  location /healthz_block {
+    proxy_pass http://{{ nginx_conf.node_rpc.healthz.endpoint }};
+  }
+  {% endif -%}
+
+}
+
+{% if nginx_conf.node_rpc.forward_ssl %}
+server {
+  listen 80;
+  server_name {{ nginx_conf.node_rpc.domains | join(' ') }};
+
+  location / {
+    rewrite ^/(.*)$ https://$host/$1 permanent;
+  }
+}
+{% endif %}
+

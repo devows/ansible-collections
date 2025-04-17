@@ -1,0 +1,26 @@
+
+##
+# Default configuration
+##
+
+subql_workdir: /mnt/data/subql
+
+subql_runner:
+  port: 3400
+  path:
+    bootstrap: "{{ subql_workdir }}/bootstrap"
+    data: "{{ subql_workdir }}/data"
+    nginx: "{{ subql_workdir }}/data/nginx"
+  database:
+    password: let-me-in
+    data_path: "{{ subql_workdir }}/data/postgres"
+  nodes:
+    - name: subql-apps-pangolin
+      image: onfinality/subql-node:v1.14.1
+      endpoint: wss://pangolin-rpc.darwinia.network
+      ipfs_cid: QmPUWv2bP68f64HRhy8MRcMQE5jVdtWngj3qJ6ErXgATQz
+      dictionary: https://api.subquery.network/sq/darwinia-network/pangolin-dictionary
+  queries:
+    - name: subql-apps-pangolin
+      image: onfinality/subql-query:v1.7.0
+

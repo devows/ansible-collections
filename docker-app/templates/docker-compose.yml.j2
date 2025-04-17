@@ -1,0 +1,50 @@
+services:
+  {% for name, schema in docker_app_runner.container.items() %}
+
+  {{ schema.name | default(name) }}:
+    container_name: {{ schema.name | default(name) }}
+    image: {{ schema.image | default(container_default.image) }}
+    restart: {{ schema.restart | default(container_default.restart) }}
+
+    {% if (schema.environment | default(container_default.environment)).items() | length > 0 -%}
+    environment:
+      {% for k, v in schema.environment.items() -%}
+      {{ k }}: {{ v }}
+      {% endfor -%}
+    {% endif %}
+
+    {% if schema.ports | default(container_default.ports) | length > 0 -%}
+    ports:
+      {% for item in schema.ports -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+
+    {% if schema.volumes | default(container_default.volumes) | length > 0 -%}
+    volumes:
+      {% for item in schema.volumes -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+
+    {% if (schema.raw | default(container_default.raw)).items() | length > 0 -%}
+    {% for k, v in schema.raw.items() -%}
+    {{ k }}: {{ v }}
+    {% endfor -%}
+    {% endif %}
+
+    {% if schema.command | default(container_default.command) | length > 0 -%}
+    command:
+      {% for item in schema.command -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+
+    {% if schema.depends_on | default(container_default.depends_on) | length > 0 -%}
+    depends_on:
+      {% for item in schema.depends_on -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+
+  {% endfor %}

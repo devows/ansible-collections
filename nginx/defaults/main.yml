@@ -1,0 +1,104 @@
+
+nginx_workdir: /mnt/data/nginx
+nginx_runner:
+  image: nginx:1.27-alpine
+  volumes:
+    - "{{ nginx_workdir }}/nginx.conf:/etc/nginx/nginx.conf"
+    - "{{ nginx_workdir }}/conf.d:/etc/nginx/conf.d"
+    - /etc/cert:/etc/cert
+
+nginx_conf:
+  ssl: [ ]
+    # - darwinia
+    # - helix
+  node_rpc:
+    enable: false
+    name: darwinia
+    domains:
+      - localhost
+    listen: 80
+    forward_ssl: false
+    load_balancing:
+      enable: false
+      method: default # load balancing method. round-robin (default), least_conn, ip_hash
+    proxy_host: $host
+    deny: []
+    default_value:
+      endpoint: 127.0.0.1
+      http: 9933
+      ws: 9944
+    hosts:
+      ##
+      # Default value
+      ##
+      - host: 127.0.0.1
+
+      # With weight
+      # - host: 127.0.0.2
+      #   weight: 2
+
+      ##
+      # Full example
+      ##
+      # - host: 127.0.0.1
+      #   port:
+      #     http: 9933
+      #     ws: 9944
+      #   weight: 2
+
+    healthz:
+      enable: false
+      endpoint: 127.0.0.1:49944
+
+    additional:
+      x_in_server: ""
+      x_out_server: ""
+
+  proxy_endpoint:
+    name: endpoint
+    endpoints: []
+
+nginx_default:
+  proxy_endpoint:
+    name: endpoint
+    enable: false
+    domains:
+      - localhost
+    listen: 80
+    forward_ssl: false
+    locations: []
+    additional:
+      x_in_server: ""
+      x_out_server: ""
+
+  location:
+    name: default
+    path: /
+    upstream:
+      enable: false
+      name: upstream_backend
+      body: {}
+    # load_balancing_strategy: ip_hash
+    providers: [] # default providers to empty
+    #        - name: local
+    #          endpoint: http://127.0.0.1:8080
+    #          host: $host
+    #          listen: 12300
+    #          proxy_ssl: false
+    #          weight: 1
+    deny: [] # 1.1.1.1
+    endpoint: http://127.0.0.1:8080
+    proxy_ssl: false
+    host: $host
+    additional:
+      x_in_location: ""
+
+  provider:
+    name: default
+    proxy_ssl: false
+    host: $host
+    #weight: 1
+    #endpoint: http://127.0.0.1:8080
+    #listen: 12300
+    additional_server: ""
+    additional_upstream: ""

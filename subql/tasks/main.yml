@@ -1,0 +1,55 @@
+
+- name: Creates bootstrap directory
+  file:
+    path: "{{ subql_runner.path.bootstrap }}"
+    state: directory
+
+- name: Creates data directory
+  file:
+    path: "{{ subql_runner.path.data }}"
+    state: directory
+
+- name: Creates nginx conf directory
+  file:
+    path: "{{ subql_runner.path.nginx }}"
+    state: directory
+
+- name: Generate env
+  template:
+    src: .env.j2
+    dest: "{{ subql_runner.path.bootstrap }}/.env"
+    mode: "0644"
+
+- name: Generate config for common
+  template:
+    src: docker-compose.common.yml.j2
+    dest: "{{ subql_runner.path.bootstrap }}/docker-compose.common.yml"
+    mode: "0644"
+
+- name: Generate config for node
+  template:
+    src: docker-compose.node.yml.j2
+    dest: "{{ subql_runner.path.bootstrap }}/docker-compose.node.yml"
+    mode: "0644"
+
+- name: Generate config for query
+  template:
+    src: docker-compose.query.yml.j2
+    dest: "{{ subql_runner.path.bootstrap }}/docker-compose.query.yml"
+    mode: "0644"
+
+- name: Generate config for nginx
+  template:
+    src: proxy-subql.conf.j2
+    dest: "{{ subql_runner.path.nginx }}/proxy-subql.conf"
+    mode: "0644"
+
+- name: Start subql
+  ansible.builtin.command: docker compose -f docker-compose.common.yml -f docker-compose.node.yml -f docker-compose.query.yml up -d
+  args:
+    chdir: "{{ subql_runner.path.bootstrap }}"
+
+- name: Restart nginx
+  ansible.builtin.command: docker compose -f docker-compose.common.yml -f docker-compose.query.yml restart nginx
+  args:
+    chdir: "{{ subql_runner.path.bootstrap }}"

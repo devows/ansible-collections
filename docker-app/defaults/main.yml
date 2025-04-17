@@ -1,0 +1,21 @@
+docker_app_path: /mnt/data/app
+docker_artifact_path: '{{ docker_app_path }}/artifact'
+
+docker_app_runner:
+  container: {}
+  artifact_files: []
+
+container_default:
+  image: alpine:3
+  restart: always
+  environment: {}
+  ports: []
+  volumes: []
+  raw: {}
+  command: []
+  depends_on: []
+  # dotenv: {}
+
+artifact_file_default:
+  path: 'mount.txt'
+  content: ''
