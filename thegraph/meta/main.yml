@@ -1,5 +1,6 @@
 galaxy_info:
-  author: plate-thegraph
+  role_name: thegraph
+  author: fewensa
   description: thegraph
   license: MIT
   min_ansible_version: 2.1

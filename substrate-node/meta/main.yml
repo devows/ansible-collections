@@ -1,5 +1,6 @@
 galaxy_info:
-  author: plate-substrate-node
+  role_name: substrate-node
+  author: fewensa
   description: substrate node
   license: MIT
   min_ansible_version: 2.1
