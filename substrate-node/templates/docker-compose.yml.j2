@@ -1,0 +1,47 @@
+services:
+  substrate-node:
+    container_name: node-{{ substrate_node_runner.node.name }}
+    image: {{ substrate_node_runner.node.image }}
+    restart: always
+
+    {% if substrate_node_runner.node.ports | length > 0 -%}
+    ports:
+      {% for item in substrate_node_runner.node.ports -%}
+      - {{ item }}
+      {% endfor %}
+    {% endif %}
+
+    {% if substrate_node_runner.node.volumes | length > 0 -%}
+    volumes:
+      {% for item in substrate_node_runner.node.volumes -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+
+    {% if substrate_node_runner.node.command | length > 0 -%}
+    command:
+      {% for item in substrate_node_runner.node.command -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+
+  {% if substrate_node_runner.liveness_probe.enable -%}
+  liveness-probe:
+    container_name: liveness-probe-{{ substrate_node_runner.node.name }}
+    image: {{ substrate_node_runner.liveness_probe.image }}
+    restart: always
+
+    {% if substrate_node_runner.liveness_probe.ports | length > 0 -%}
+    ports:
+      {% for item in substrate_node_runner.liveness_probe.ports -%}
+      - {{ item }}
+      {% endfor %}
+    {% endif %}
+
+    {% if substrate_node_runner.liveness_probe.command | length > 0 -%}
+    command:
+      {% for item in substrate_node_runner.liveness_probe.command -%}
+      - {{ item }}
+      {% endfor -%}
+    {% endif %}
+  {% endif %}

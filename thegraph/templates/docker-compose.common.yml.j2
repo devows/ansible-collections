@@ -1,0 +1,47 @@
+services:
+
+  postgres:
+    container_name: thegraph-postgres
+    image: {{ thegraph_runner.postgres.image }}
+    restart: always
+    ports:
+      {% for item in thegraph_runner.postgres.ports -%}
+      - {{ item }}
+      {% endfor %}
+
+    command: ["postgres", "-cshared_preload_libraries=pg_stat_statements"]
+    environment:
+      {% for k, v in thegraph_runner.postgres.environment.items() -%}
+      {{ k }}: '{{ v }}'
+      {% endfor %}
+
+    volumes:
+      {% for item in thegraph_runner.postgres.volumes -%}
+      - {{ item }}
+      {% endfor %}
+
+    networks:
+      - thegraph
+
+  nginx:
+    container_name: thegraph-nginx
+    image: nginx:1.20-alpine
+    ports:
+      - 127.0.0.1:{{ thegraph_runner.port }}:80
+    restart: always
+    volumes:
+      - {{ thegraph_runner.path.nginx }}:/etc/nginx/conf.d
+    networks:
+      - thegraph
+
+    depends_on:
+      - postgres
+      {% for item in thegraph_runner.nodes -%}
+      - thegraph-{{ item.name }}
+      {% endfor %}
+
+networks:
+  default:
+    name: nat_thegraph_common
+  thegraph:
+    external: true

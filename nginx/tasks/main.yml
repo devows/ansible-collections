@@ -1,0 +1,84 @@
+
+- name: Creates nginx workspace directory
+  file:
+    path: "{{ nginx_workdir }}"
+    state: directory
+
+- name: Creates conf.d directory
+  file:
+    path: "{{ nginx_workdir }}/conf.d"
+    state: directory
+
+- name: Copy nginx config
+  copy:
+    src: nginx.conf
+    dest: "{{ nginx_workdir }}/nginx.conf"
+  notify:
+    - restart nginx
+
+- name: Copy default config
+  copy:
+    src: default.conf
+    dest: "{{ nginx_workdir }}/conf.d/default.conf"
+  notify:
+    - restart nginx
+
+- name: Copy common config
+  copy:
+    src: common
+    dest: "{{ nginx_workdir }}/conf.d"
+  notify:
+    - restart nginx
+
+- name: Creates common ssl directory
+  when:
+    - nginx_conf.ssl | length > 0
+  file:
+    path: "{{ nginx_workdir }}/conf.d/common/ssl"
+    state: directory
+
+- name: Copy SSL config
+  copy:
+    src: "ssl/{{ item }}"
+    dest: "{{ nginx_workdir }}/conf.d/common/ssl"
+  notify:
+    - restart nginx
+  loop: "{{ nginx_conf.ssl }}"
+
+- name: Copy include config
+  copy:
+    src: include.conf
+    dest: "{{ nginx_workdir }}/conf.d/include.conf"
+  notify:
+    - restart nginx
+
+- name: Generate node-rpc config
+  when: nginx_conf.node_rpc.enable == true
+  template:
+    src: node-rpc.conf.j2
+    dest: "{{ nginx_workdir }}/conf.d/node-{{ nginx_conf.node_rpc.name }}.conf"
+    mode: "0644"
+  notify:
+    - restart nginx
+
+- name: Generate proxy-endpoint
+  when:
+    - nginx_conf.proxy_endpoint.endpoints | length > 0
+  template:
+    src: proxy-endpoint.conf.j2
+    dest: "{{ nginx_workdir }}/conf.d/proxy-{{ nginx_conf.proxy_endpoint.name }}.conf"
+    mode: "0644"
+  notify:
+    - restart nginx
+
+- name: Generate docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ nginx_workdir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Start service
+  ansible.builtin.command: docker compose up -d
+  args:
+    chdir: "{{ nginx_workdir }}"
+

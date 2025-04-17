@@ -1,0 +1,36 @@
+
+
+substrate_node_name: darwinia
+substrate_node_workdir: "/mnt/data/{{ substrate_node_name }}"
+substrate_node_runner:
+  node:
+    image: ghcr.io/darwinia-network/darwinia:v6.3.4-1
+    name: darwinia
+    command:
+      - --base-path=/data/darwinia/data
+      - --chain=darwinia
+      - --in-peers=15
+      - --listen-addr=/ip4/0.0.0.0/tcp/30333
+      - --listen-addr=/ip4/0.0.0.0/tcp/30334/ws
+      - --log=rpc=trace,parity_ws=info
+      - --name='[OFFICIAL-NODE] Darwinia R1'
+      - --node-key-file=/data/darwinia/node-key
+      - --out-peers=10
+      - --state-pruning=archive
+      - --blocks-pruning=archive
+      - --rpc-cors=all
+      - --rpc-external
+      - --ws-external
+      - --ws-max-connections=1000
+    ports:
+      - 9944:9944
+    volumes: []
+  liveness_probe:
+    enable: false
+    image: ghcr.io/fewensa/docker-image/node-liveness-probe:sha-9f037d1
+    ports:
+      - 127.0.0.1:49944:49944
+    command:
+      - node-liveness-probe
+      - -listen=:49944
+      - -ws-endpoint=ws://substrate-node:9944

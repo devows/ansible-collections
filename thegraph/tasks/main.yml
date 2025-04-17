@@ -1,0 +1,43 @@
+
+- name: Creates workdir directory
+  file:
+    path: "{{ thegraph_workdir }}"
+    state: directory
+
+- name: Creates thegraph-nginx directory
+  file:
+    path: "{{ thegraph_runner.path.nginx }}"
+    state: directory
+
+- name: Create network
+  ansible.builtin.shell: |
+    docker network create thegraph || true
+
+- name: Generate docker-compose.common.yml
+  template:
+    src: docker-compose.common.yml.j2
+    dest: "{{ thegraph_workdir }}/docker-compose.common.yml"
+    mode: "0644"
+
+- name: Generate docker-compose.thegraph.yml
+  template:
+    src: docker-compose.thegraph.yml.j2
+    dest: "{{ thegraph_workdir }}/docker-compose.thegraph.yml"
+    mode: "0644"
+
+- name: Generate config for nginx
+  template:
+    src: proxy-thegraph.conf.j2
+    dest: "{{ thegraph_runner.path.nginx }}/proxy-thegraph.conf"
+    mode: "0644"
+
+- name: Start common service
+  ansible.builtin.command: docker compose -f docker-compose.common.yml -f docker-compose.thegraph.yml up -d
+  args:
+    chdir: "{{ thegraph_workdir }}"
+
+- name: Restart nginx
+  ansible.builtin.command: docker compose -f docker-compose.common.yml -f docker-compose.thegraph.yml restart nginx
+  args:
+    chdir: "{{ thegraph_workdir }}"
+

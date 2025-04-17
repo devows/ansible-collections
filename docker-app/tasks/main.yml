@@ -1,0 +1,32 @@
+- name: Creates bootstrap directory
+  file:
+    path: "{{ docker_app_path }}"
+    state: directory
+
+- name: Generate artifact directory
+  when:
+    - docker_app_runner.artifact_files | length > 0
+  file:
+    path: "{{ (docker_artifact_path + '/' + item.path) | dirname }}"
+    state: directory
+  loop: "{{ docker_app_runner.artifact_files }}"
+
+- name: Generate artifact files
+  when:
+    - docker_app_runner.artifact_files | length > 0
+  copy:
+    content: "{{ item.content }}"
+    dest: "{{ docker_artifact_path }}/{{ item.path }}"
+#    create: yes
+  loop: "{{ docker_app_runner.artifact_files }}"
+
+- name: Generate docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ docker_app_path }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Start app
+  ansible.builtin.command: docker compose -f docker-compose.yml up -d
+  args:
+    chdir: "{{ docker_app_path }}"

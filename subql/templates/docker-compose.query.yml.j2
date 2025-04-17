@@ -1,0 +1,29 @@
+services:
+  {% for item in subql_runner.queries -%}
+
+  query-{{ item.name }}:
+    container_name: query-{{ item.name }}
+    image: {{ item.image }}
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: ${DB_PASSWORD}
+      DB_DATABASE: {{ item.name | replace('-', '_')}}
+      DB_HOST: postgres
+      DB_PORT: 5432
+    command:
+      - --name=app
+      - --playground
+      - --indexer=http://node-{{ item.name }}:3000
+    networks:
+      - subql
+    depends_on:
+      - postgres
+
+  {% endfor %}
+
+networks:
+  default:
+    name: nat_subql_query
+  subql:
+    external: true

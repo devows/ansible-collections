@@ -1,0 +1,31 @@
+services:
+
+  {% for item in thegraph_runner.nodes -%}
+
+  thegraph-{{ item.name }}:
+    container_name: thegraph-{{ item.name }}
+    image: {{ item.image }}
+    restart: always
+    ports:
+      {% for item in item.ports -%}
+      - {{ item }}
+      {% endfor %}
+
+    environment:
+      {% for k, v in item.environment.items() -%}
+      {{ k }}: '{{ v }}'
+      {% endfor %}
+
+    networks:
+      - thegraph
+    depends_on:
+      - postgres
+  {% endfor %}
+
+
+networks:
+  default:
+    name: nat_thegraph_graph
+  thegraph:
+    external: true
+

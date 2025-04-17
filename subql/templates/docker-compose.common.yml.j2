@@ -1,0 +1,38 @@
+services:
+  postgres:
+    container_name: subql-postgres
+    image: postgres:12-alpine
+    restart: always
+    volumes:
+      - ${DB_DATA_PATH}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - subql
+
+  nginx:
+    container_name: subql-nginx
+    image: nginx:1.20-alpine
+    ports:
+      - 127.0.0.1:{{ subql_runner.port }}:80
+    restart: always
+    volumes:
+      - {{ subql_runner.path.nginx }}:/etc/nginx/conf.d
+    networks:
+      - subql
+    depends_on:
+      - postgres
+      {% for item in subql_runner.nodes -%}
+      - query-{{ item.name }}
+      {% endfor %}
+
+networks:
+  default:
+    name: nat_subql_before
+  subql:
+    external: true

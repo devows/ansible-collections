@@ -1,0 +1,39 @@
+services:
+  {% for item in subql_runner.nodes %}
+
+  node-{{ item.name }}:
+    container_name: node-{{ item.name }}
+    image: {{ item.image }}
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: ${DB_PASSWORD}
+      DB_DATABASE: {{ item.name | replace('-', '_')}}
+      DB_HOST: postgres
+      DB_PORT: 5432
+    command:
+      - --disable-historical=true
+      - -f=ipfs://{{ item.ipfs_cid }}
+      - --db-schema=app
+      - --network-endpoint={{ item.endpoint }}
+      {% if item.dictionary is defined -%}
+      - --network-dictionary={{ item.dictionary }}
+      {% endif %}
+
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://node-{{ item.name }}:3000/ready"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    networks:
+      - subql
+
+  {% endfor %}
+
+networks:
+  default:
+    name: nat_subql_node
+  subql:
+    external: true
