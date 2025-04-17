@@ -1,3 +1,6 @@
 *.retry
 .DS_Store
 *.local.*
+*.tar.gz
+build
+dist
