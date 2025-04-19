@@ -1,0 +1,25 @@
+- name: Creates bootstrap directory
+  file:
+    path: "{{ certbot_renew_path }}"
+    state: directory
+
+- name: Generate docker-compose.yml
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ certbot_renew_path }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Start certbot-renew
+  ansible.builtin.command: docker-compose -f docker-compose.yml up --exit-code-from certbot-renew
+  args:
+    chdir: "{{ certbot_renew_path }}"
+
+- name: Remove certbot-renew
+  ansible.builtin.command: docker-compose -f docker-compose.yml down
+  args:
+    chdir: "{{ certbot_renew_path }}"
+
+- name: Remove env
+  ansible.builtin.command: rm -rf {{ certbot_renew_path }}/.env
+  args:
+    chdir: "{{ certbot_renew_path }}"

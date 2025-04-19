@@ -1,0 +1,4 @@
+certbot_renew_path: /data/cert
+certbot_renew_runner:
+  image: certbot/dns-cloudflare
+certbot_renew_cert_path: '{{ certbot_renew_path }}/letsencrypt'

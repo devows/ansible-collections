@@ -1,0 +1,9 @@
+galaxy_info:
+  role_name: certbot-renew
+  author: fewensa
+  description: certbot renew
+  license: MIT
+  min_ansible_version: 2.1
+  galaxy_tags: []
+
+dependencies: []
