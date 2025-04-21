@@ -15,6 +15,7 @@ container_default:
   command: []
   depends_on: []
   # dotenv: {}
+  networks: {}
 
 artifact_file_default:
   path: 'mount.txt'

@@ -48,3 +48,10 @@ services:
     {% endif %}
 
   {% endfor %}
+
+{% if (docker_app_runner.networks | default(container_default.networks)).items() | length > 0 -%}
+networks:
+  {% for k, v in docker_app_runner.networks.items() -%}
+  {{ k }}: {{ v }}
+  {% endfor -%}
+{% endif %}
