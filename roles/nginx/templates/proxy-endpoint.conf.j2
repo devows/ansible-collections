@@ -62,7 +62,7 @@ server {
 
     {{ location.additional.x_in_location | default(nginx_default.location.additional.x_in_location) }}
 
-    {% if location.enable_pass | default(nginx_default.location.enable_pass)-%}
+    {% if location.additional.enable_pass | default(nginx_default.additional.location.enable_pass)-%}
 
     {% if location.upstream.enable | default(nginx_default.location.upstream.enable)-%}
     proxy_pass http://${{ location.upstream.name | default(nginx_default.location.upstream.name) }};

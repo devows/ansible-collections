@@ -74,7 +74,6 @@ nginx_default:
   location:
     name: default
     path: /
-    enable_pass: true
     upstream:
       enable: false
       name: upstream_backend
@@ -92,6 +91,7 @@ nginx_default:
     proxy_ssl: false
     host: $host
     additional:
+      enable_pass: true
       x_in_location: ""
 
   provider:
