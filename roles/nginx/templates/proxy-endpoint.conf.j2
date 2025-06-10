@@ -59,17 +59,21 @@ server {
   {% for location in proxy_endpoint.locations | default(nginx_default.proxy_endpoint.locations) -%}
   ## location {{ location.name | default(nginx_default.location.name) }}
   location {{ location.path | default(nginx_default.location.path) }} {
+
+    {{ location.additional.x_in_location | default(nginx_default.location.additional.x_in_location) }}
+
+    {% if location.enable_pass | default(nginx_default.location.enable_pass)-%}
+
     {% if location.upstream.enable | default(nginx_default.location.upstream.enable)-%}
     proxy_pass http://${{ location.upstream.name | default(nginx_default.location.upstream.name) }};
     {% else -%}
-
-
-    {{ location.additional.x_in_location | default(nginx_default.location.additional.x_in_location) }}
 
     {% if location.providers | default(nginx_default.location.providers)| length > 0 %}
     proxy_pass http://$upstream_backend_{{ proxy_endpoint.name | default(nginx_default.proxy_endpoint.name) }}_{{ location.name | default(nginx_default.location.name) }};
     {% else %}
     proxy_pass {{ location.endpoint | default(nginx_default.location.endpoint) }};
+    {% endif %}
+
     {% endif %}
 
     {% endif %}
@@ -84,10 +88,12 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
 
+
     {% if location.proxy_ssl | default(nginx_default.location.proxy_ssl) %}
     proxy_ssl_name {{ location.host | default(nginx_default.location.host) }};
     proxy_ssl_server_name on;
     {% endif -%}
+
 
     {% if location.deny | default(nginx_default.location.deny) | length > 0 -%}
     {% for deny in location.deny | default(nginx_default.location.deny) -%}

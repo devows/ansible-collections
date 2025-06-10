@@ -74,6 +74,7 @@ nginx_default:
   location:
     name: default
     path: /
+    enable_pass: true
     upstream:
       enable: false
       name: upstream_backend
