@@ -9,12 +9,6 @@
   file:
     path: "{{ (docker_artifact_path + '/' + item.path) | dirname }}"
     state: directory
-    # Conditionally set owner: use item's owner, fallback omit.
-    owner: "{{ item.owner | default(omit) }}"
-    # Conditionally set group: use item's group, fallback omit.
-    group: "{{ item.group | default(omit) }}"
-    # Conditionally set mode: use item's mode, fallback to global, or omit.
-    mode: "{{ item.mode | default(artifact_file_default.file_mode | default(omit)) }}"
   loop: "{{ docker_app_runner.artifact_files }}"
 
 - name: Generate artifact files
@@ -24,6 +18,12 @@
     content: "{{ item.content }}"
     dest: "{{ docker_artifact_path }}/{{ item.path }}"
 #    create: yes
+    # Conditionally set owner: use item's owner, fallback omit.
+    owner: "{{ item.owner | default(omit) }}"
+    # Conditionally set group: use item's group, fallback omit.
+    group: "{{ item.group | default(omit) }}"
+    # Conditionally set mode: use item's mode, fallback to global, or omit.
+    mode: "{{ item.mode | default(artifact_file_default.file_mode | default(omit)) }}"
   loop: "{{ docker_app_runner.artifact_files }}"
 
 - name: Generate docker-compose.yml
