@@ -20,3 +20,4 @@ container_default:
 artifact_file_default:
   path: 'mount.txt'
   content: ''
+  file_mode: '0644'
